@@ -2,6 +2,8 @@
 
 This guide connects **Exotel SIP trunking** to **[Smallest AI](https://smallest.ai/)** **Atoms** using **Import SIP** (bring your own number over SIP). Smallest documents this in the platform **Phone Numbers** flow — you provide a **SIP Termination URL** (where Atoms sends **outbound** SIP toward your carrier) and copy the **SIP Origination URL** that Atoms gives you into your carrier for **inbound** routing.
 
+> **India market compliance:** For India deployments, keep **SIP signaling and media** on paths that remain **in India** (India-region telephony edges and, where the provider offers it, India or in-country data residency). If a Voice AI provider’s SIP signaling or media endpoints are **outside India**, prefer a **self-hosted** deployment of that stack in an **India region** (or an equivalent India-resident architecture) so signaling and media stay in-country. Confirm residency and lawful-interception requirements with your compliance team and with Exotel before go-live.
+
 **GitHub repo (reference):** https://github.com/exotel/AgentStream-VoiceAIEcosystem
 
 > **Applicability:** **UI-driven** (Atoms “Import SIP” screen) with optional **API-driven** outbound call triggering.

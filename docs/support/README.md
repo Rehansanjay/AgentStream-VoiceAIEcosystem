@@ -2,6 +2,8 @@
 
 Use this page to jump to **official provider docs**, **consoles**, and the **per-vendor support articles** in this repo. Shared Exotel trunk curls live in [`_exotel-trunk-api-snippets.md`](./_exotel-trunk-api-snippets.md).
 
+> **India market compliance:** For India deployments, keep **SIP signaling and media** on paths that remain **in India** (India-region telephony edges and, where the provider offers it, India or in-country data residency). If a Voice AI provider’s SIP signaling or media endpoints are **outside India**, prefer a **self-hosted** deployment of that stack in an **India region** (or an equivalent India-resident architecture) so signaling and media stay in-country. Confirm residency and lawful-interception requirements with your compliance team and with Exotel before go-live.
+
 **GitHub repo (reference):** https://github.com/exotel/AgentStream-VoiceAIEcosystem
 
 ---
@@ -36,11 +38,17 @@ Treat the steps below as **minimum click/API paths** once those are true.
 | **Vocallabs** | [API docs](https://docs.vocallabs.ai/vocallabs) | [Superflow B2B](https://api.superflow.run/b2b/) — `createSIPCall`, `initiateVocallabsCall` ([reference](https://docs.vocallabs.ai/vocallabs)) | [`exotel-vocallabs-sip-trunk.md`](./exotel-vocallabs-sip-trunk.md) |
 | **Rapida AI** | [rapida.ai](https://www.rapida.ai/) | [Exotel integration](https://doc.rapida.ai/integrations/telephony/exotel) · [SIP trunk](https://doc.rapida.ai/integrations/telephony/sip) · [Phone deployment](https://doc.rapida.ai/voice-deployment-options/phone) | [`exotel-rapida-ai-sip-trunk.md`](./exotel-rapida-ai-sip-trunk.md) |
 | **NLPearl.AI** | [platform.nlpearl.ai](https://platform.nlpearl.ai/) | [Custom VoIP](https://developers.nlpearl.ai/pages/custom_voip) · [Outbound/API](https://developers.nlpearl.ai/pages/outbound_api) · [Make Call API](https://developers.nlpearl.ai/api-reference/v1/outbound/make-call) | [`exotel-nlpearl-sip-trunk.md`](./exotel-nlpearl-sip-trunk.md) |
+| **OpenAI** (Realtime SIP) | [platform.openai.com](https://platform.openai.com/settings) | [Realtime API with SIP](https://developers.openai.com/api/docs/guides/realtime-sip) | [`exotel-openai-sip-trunk.md`](./exotel-openai-sip-trunk.md) |
+| **xAI** (Grok Voice Agent SIP) | [console.x.ai](https://console.x.ai/) | [SIP Phone Calls](https://docs.x.ai/developers/model-capabilities/audio/voice-agent/sip) · [Voice API](https://docs.x.ai/developers/rest-api-reference/inference/voice) | [`exotel-xai-sip-trunk.md`](./exotel-xai-sip-trunk.md) |
 
 **Exotel (all paths):** [API credentials (India)](https://my.in.exotel.com/apisettings/site#api-credentials) · [SIP API reference](https://docs.exotel.com/dynamic-sip-trunking/detailed-sip-trunking-api-reference) · [Network / firewall](https://docs.exotel.com/dynamic-sip-trunking/network-and-firewall-configuration) · [Voice AI Flow / Connect](https://support.exotel.com/support/solutions/articles/3000133452-flow-and-api-configuration-guide-for-voice-ai-contact-centre-platforms-via-exotel-virtual-sip-trunk)
 
 **Exotel edge hostname examples (India):** `in.voip.exotel.com:5070` (TCP) · `in.voip.exotel.com:443` (TLS). Always use the exact host/IP + port + transport Exotel assigns (see [`_exotel-trunk-api-snippets.md`](./_exotel-trunk-api-snippets.md)).  
 **ACL note:** only use `whitelisted-ips` for **static `/32`** IPs (`mask: 32`)—do **not** attempt CIDR ranges; if a provider publishes only CIDR/shared egress, prefer **digest** and coordinate with Exotel support.
+
+**Auth-based preference (OpenAI / xAI articles and recommended generally):** Prefer Exotel **`POST .../credentials`** (SIP digest) over trunk IP ACL for Voice AI direct trunking. OpenAI Realtime SIP routes by **`proj_…`** in the SIP URI (no peer digest API). xAI BYO uses **`sip_auth` digest** matching Exotel credentials.
+
+**Direct SIP vs Voicebot WSS:** OpenAI / xAI guides in this repo are **Direct SIP trunk** paths. Exotel Voicebot WebSocket streaming (and Pipecat `ExotelFrameSerializer`) is a **different** path — do not mix them.
 
 ---
 
@@ -116,6 +124,20 @@ Treat the steps below as **minimum click/API paths** once those are true.
 3. **Exotel inbound:** set trunk `destination-uris` to NLPearl SIP Domain + Exotel Flow Connect **`sip:<trunk_sid>`**.  
 4. Test outbound (UI/API) and inbound (call the DID).
 
+### OpenAI (Realtime SIP — inbound, auth-based)
+
+1. **OpenAI:** project webhook for `realtime.call.incoming`; copy `proj_…`.  
+2. **Exotel:** trunk + DID + **`POST .../credentials`** (digest); **`destination-uris`** toward `sip.api.openai.com:5061;transport=tls` (SIP user = `proj_…`); Flow **Connect** **`sip:<trunk_sid>`**. Do **not** ACL OpenAI media CIDRs.  
+3. **Webhook:** `POST /v1/realtime/calls/{call_id}/accept` with model/instructions; optional Realtime WS with `call_id`.  
+4. Test inbound PSTN to the DID. See [`exotel-openai-sip-trunk.md`](./exotel-openai-sip-trunk.md).
+
+### xAI (Grok Voice Agent SIP — inbound, auth-based)
+
+1. **xAI:** `POST /v2/phone-numbers` with `origin: "byo_trunk"`, E.164 DID, webhook URL, **`sip_auth` digest** (no `allowed_addresses`); store signing secret once.  
+2. **Exotel:** trunk + DID + **`POST .../credentials`** matching xAI digest; **`destination-uris`** toward `sip.voice.x.ai:5061;transport=tls`; Flow **Connect** **`sip:<trunk_sid>`**.  
+3. **Webhook:** verify signature → `wss://api.x.ai/v1/realtime?call_id=` → `session.update` → `response.create`.  
+4. Test inbound PSTN to the DID. See [`exotel-xai-sip-trunk.md`](./exotel-xai-sip-trunk.md).
+
 ---
 
 ## What was easy to miss (gaps we closed in docs)
@@ -131,6 +153,9 @@ Treat the steps below as **minimum click/API paths** once those are true.
 | **Vocallabs** is **API-first** (`createSIPCall`, websockets) — not the same as BYO SIP trunk UI | [`exotel-vocallabs-sip-trunk.md`](./exotel-vocallabs-sip-trunk.md) |
 | **Rapida** has **native Exotel** (webhook/stream) **and** optional **SIP trunk** | [`exotel-rapida-ai-sip-trunk.md`](./exotel-rapida-ai-sip-trunk.md) |
 | **NLPearl** uses **Custom VoIP** (SIP Domain inbound + SIP Trunk URL outbound) | [`exotel-nlpearl-sip-trunk.md`](./exotel-nlpearl-sip-trunk.md) |
+| **OpenAI** Realtime SIP is webhook + `/accept` (project URI), digest on Exotel trunk | [`exotel-openai-sip-trunk.md`](./exotel-openai-sip-trunk.md) |
+| **xAI** BYO SIP uses digest `sip_auth` + Realtime WS join (no `/accept`) | [`exotel-xai-sip-trunk.md`](./exotel-xai-sip-trunk.md) |
+| **India market compliance** note on provider READMEs + support articles | Keep signaling/media in India; self-host if provider endpoints are outside India |
 
 ---
 

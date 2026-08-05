@@ -2,6 +2,8 @@
 
 This guide aligns **Exotel SIP trunking** with **[Ultravox](https://www.ultravox.ai/)** using the same patterns as the other Voice AI integrations in this repository: **outbound** = create trunk → map DID → credentials; **optional ACL** = static IPs only (`mask: 32`), no CIDR ranges on the Exotel trunk; **inbound** = destination URI on the trunk; **Connect** = **`sip:<trunk_sid>`** where Exotel’s product uses that form.
 
+> **India market compliance:** For India deployments, keep **SIP signaling and media** on paths that remain **in India** (India-region telephony edges and, where the provider offers it, India or in-country data residency). If a Voice AI provider’s SIP signaling or media endpoints are **outside India**, prefer a **self-hosted** deployment of that stack in an **India region** (or an equivalent India-resident architecture) so signaling and media stay in-country. Confirm residency and lawful-interception requirements with your compliance team and with Exotel before go-live.
+
 **GitHub repo (reference):** https://github.com/exotel/AgentStream-VoiceAIEcosystem
 
 > **Applicability:** **Hybrid** — Ultravox supports SIP (allowlist/registration) and also a native **Exotel streaming** medium; choose one path.

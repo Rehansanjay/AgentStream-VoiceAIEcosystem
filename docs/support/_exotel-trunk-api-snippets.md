@@ -1,6 +1,8 @@
 # Exotel SIP trunk API — shared reference
 
-Use these snippets from the support articles for **ElevenLabs**, **LiveKit**, **Retell**, **Bolna**, **Pipecat (via Daily SIP)**, **Ultravox**, **Vapi**, **Smallest AI (Atoms)**, **Vocallabs**, **Rapida AI**, and **NLPearl.AI** integrations. Replace placeholders; do not commit real secrets.
+Use these snippets from the support articles for **ElevenLabs**, **LiveKit**, **Retell**, **Bolna**, **Pipecat (via Daily SIP)**, **Ultravox**, **Vapi**, **Smallest AI (Atoms)**, **Vocallabs**, **Rapida AI**, **NLPearl.AI**, **OpenAI Realtime SIP**, and **xAI Grok Voice Agent SIP** integrations. Replace placeholders; do not commit real secrets.
+
+**Auth preference:** Prefer **SIP digest** (`POST .../credentials`) over trunk IP ACL for Voice AI direct trunking unless the provider requires static `/32` allowlisting.
 
 **GitHub repo (reference):** https://github.com/exotel/AgentStream-VoiceAIEcosystem
 
@@ -398,4 +400,6 @@ On success, the HTTP response status code will be **200 OK**.
 - [Exotel + Vocallabs support article](./exotel-vocallabs-sip-trunk.md)
 - [Exotel + Rapida AI support article](./exotel-rapida-ai-sip-trunk.md)
 - [Exotel + NLPearl.AI support article](./exotel-nlpearl-sip-trunk.md)
+- [Exotel + OpenAI Realtime SIP support article](./exotel-openai-sip-trunk.md)
+- [Exotel + xAI Voice Agent SIP support article](./exotel-xai-sip-trunk.md)
 - [Exotel network and firewall](https://docs.exotel.com/dynamic-sip-trunking/network-and-firewall-configuration)
