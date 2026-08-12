@@ -8,6 +8,7 @@ Practical integration guides and reference snippets for connecting **Exotel tele
 
 - **Support guides**: `docs/support/` — step-by-step setup for Exotel ↔ provider integrations.
 - **Shared Exotel trunk API snippets**: `docs/support/_exotel-trunk-api-snippets.md` — reusable curl templates (create trunk, map DID, credentials, allowlist, destination URI).
+- **OpenAPI (Voice AI subset)**: [`openapi/exotel-sip-trunk-voice-ai.yaml`](./openapi/exotel-sip-trunk-voice-ai.yaml) — machine-readable Exotel SIP trunk contract for Swagger UI, Postman, and client codegen ([`openapi/README.md`](./openapi/README.md)).
 - **Provider “connector” docs / quickstarts**: `<provider>/integrations/exotel-vsip/` — implementation and runbooks for each provider’s flow.
 - **WebRTC app setup**: `docs/integrations/webrtc-application-setup.md` — WebRTC application wiring notes.
 

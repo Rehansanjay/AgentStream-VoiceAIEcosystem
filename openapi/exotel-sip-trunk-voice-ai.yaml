@@ -1,0 +1,635 @@
+openapi: 3.1.0
+info:
+  title: Exotel SIP Trunk API — Voice AI subset
+  summary: Curated OpenAPI for Exotel SIP trunk setup used with Voice AI platforms.
+  description: |
+    Machine-readable contract for the **Exotel SIP trunk configuration APIs** commonly
+    used when connecting Exotel telephony to Voice AI platforms (ElevenLabs, LiveKit,
+    Retell, OpenAI Realtime SIP, xAI, Cartesia, and others).
+
+    This is a **Voice AI–focused subset**, not the full Exotel API surface. Prefer
+    **SIP digest credentials** over trunk IP ACL unless the provider gives dedicated
+    static `/32` egress IPs.
+
+    **Human guides:** see [`docs/support/`](../docs/support/README.md) in
+    [AgentStream-VoiceAIEcosystem](https://github.com/exotel/AgentStream-VoiceAIEcosystem).
+
+    **Official Exotel reference:**
+    [Detailed SIP trunking API reference](https://docs.exotel.com/dynamic-sip-trunking/detailed-sip-trunking-api-reference).
+
+    **Rate limit:** 200 requests/minute on these trunk configuration APIs.
+  version: 1.0.0
+  contact:
+    name: Exotel AgentStream — Voice AI Ecosystem
+    url: https://github.com/exotel/AgentStream-VoiceAIEcosystem
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+externalDocs:
+  description: Support hub — provider guides and Exotel trunk curl snippets
+  url: https://github.com/exotel/AgentStream-VoiceAIEcosystem/tree/main/docs/support
+
+servers:
+  - url: https://api.in.exotel.com
+    description: India (recommended for India PSTN / in-country signaling)
+  - url: https://api.exotel.com
+    description: Singapore / other clusters
+
+tags:
+  - name: Trunks
+    description: Create and inspect SIP trunks
+  - name: Phone numbers
+    description: Map Exophones (DIDs) to a trunk
+  - name: Credentials
+    description: SIP digest auth (recommended for Voice AI direct trunking)
+  - name: Whitelisted IPs
+    description: Static `/32` ACL only — no CIDR ranges on trunk
+  - name: Destination URIs
+    description: Inbound SIP routing (PSTN → Exotel → Voice AI partner)
+
+security:
+  - basicAuth: []
+
+paths:
+  /v2/accounts/{accountSid}/trunks:
+    post:
+      tags: [Trunks]
+      operationId: createTrunk
+      summary: Create SIP trunk
+      description: |
+        Creates a trunk. `domain_name` is Exotel’s account SIP domain
+        (`{accountSid}.pstn.exotel.com`), separate from the **edge host/IP:port**
+        Voice AI platforms use to send SIP toward Exotel.
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrunkRequest'
+            examples:
+              voiceAi:
+                summary: Typical Voice AI trunk
+                value:
+                  trunk_name: voice_ai_trunk
+                  nso_code: ANY-ANY
+                  domain_name: your_account_sid.pstn.exotel.com
+      responses:
+        '200':
+          description: Trunk created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+
+  /v2/accounts/{accountSid}/trunks/{trunkSid}:
+    get:
+      tags: [Trunks]
+      operationId: getTrunk
+      summary: Get trunk
+      description: Verify trunk configuration after create / update.
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      responses:
+        '200':
+          description: Trunk details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+
+  /v2/accounts/{accountSid}/trunks/{trunkSid}/phone-numbers:
+    get:
+      tags: [Phone numbers]
+      operationId: listPhoneNumbers
+      summary: List phone numbers on trunk
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      responses:
+        '200':
+          description: Phone numbers mapped to the trunk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+    post:
+      tags: [Phone numbers]
+      operationId: mapPhoneNumber
+      summary: Map DID (Exophone) to trunk
+      description: |
+        Map an E.164 Exophone to the trunk. Optional `mode: flow` for StreamKit /
+        Voice AI Flow routing. Save returned `id` for updates.
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MapPhoneNumberRequest'
+            examples:
+              e164:
+                value:
+                  phone_number: '+9198XXXXXXXX'
+              flowMode:
+                summary: Flow / StreamKit routing
+                value:
+                  phone_number: '+9198XXXXXXXX'
+                  mode: flow
+      responses:
+        '200':
+          description: Number mapped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+
+  /v2/accounts/{accountSid}/trunks/{trunkSid}/credentials:
+    get:
+      tags: [Credentials]
+      operationId: listCredentials
+      summary: List SIP digest credentials
+      description: Lists credentials configured for the trunk (password is not returned).
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      responses:
+        '200':
+          description: Credential list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCredentialsResponse'
+              examples:
+                oneCredential:
+                  value:
+                    request_id: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                    method: GET
+                    http_code: 200
+                    metadata:
+                      total: 1
+                      page_size: 50
+                      page: 1
+                      first_page_uri: /v2/accounts/exotel_account/trunks/trmum17d8e9a37a3732ecbf91a3u/credentials?page_size=50&offset=0
+                      prev_page_uri: null
+                      next_page_uri: null
+                    response:
+                      - code: 200
+                        error_data: null
+                        status: success
+                        data:
+                          id: '1234'
+                          trunk_sid: trmum17d8e9a37a3732ecbf91a3u
+                          user_name: voice_ai_user
+                          friendly_name: voice_ai_platform
+                          date_created: '2026-01-23T11:37:36Z'
+                          date_updated: '2026-01-23T11:37:36Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+    post:
+      tags: [Credentials]
+      operationId: createCredentials
+      summary: Create SIP digest credentials
+      description: |
+        Creates a username/password pair for **SIP Digest** on the trunk.
+        Configure the **same** values on your Voice AI platform outbound / termination settings.
+
+        **Recommended** for cloud Voice AI (dynamic or shared egress IPs).
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCredentialsRequest'
+            examples:
+              voiceAi:
+                value:
+                  user_name: voice_ai_user
+                  password: REPLACE_WITH_STRONG_PASSWORD
+                  friendly_name: voice_ai_platform
+      responses:
+        '200':
+          description: Credentials created (password not echoed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialMutationResponse'
+              examples:
+                created:
+                  value:
+                    request_id: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                    method: POST
+                    http_code: 200
+                    response:
+                      code: 200
+                      error_data: null
+                      status: success
+                      data:
+                        id: '1234'
+                        trunk_sid: trmum17d8e9a37a3732ecbf91a3u
+                        user_name: voice_ai_user
+                        friendly_name: voice_ai_platform
+                        date_created: '2026-01-23T11:37:36Z'
+                        date_updated: '2026-01-23T11:37:36Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+    delete:
+      tags: [Credentials]
+      operationId: deleteCredentials
+      summary: Delete SIP digest credentials
+      description: |
+        Rotate or revoke credentials. Pass credential `id` as a **query parameter**
+        (not as a path segment).
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+        - name: id
+          in: query
+          required: true
+          description: Credential entry id from create/list response
+          schema:
+            type: string
+            example: '1234'
+      responses:
+        '200':
+          description: Credentials deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialMutationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+
+  /v2/accounts/{accountSid}/trunks/{trunkSid}/whitelisted-ips:
+    get:
+      tags: [Whitelisted IPs]
+      operationId: listWhitelistedIps
+      summary: List whitelisted IPs (ACL)
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      responses:
+        '200':
+          description: Allowlist entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+    post:
+      tags: [Whitelisted IPs]
+      operationId: addWhitelistedIp
+      summary: Add static IP to trunk ACL
+      description: |
+        Allowlist a **single static IPv4**. Use `mask: 32` only — **CIDR ranges are not
+        supported** on the trunk ACL. Repeat the call per IP.
+
+        Prefer digest credentials for most Voice AI providers. Avoid mixing ACL + digest
+        unless Exotel support has confirmed precedence for your account.
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhitelistIpRequest'
+            examples:
+              static32:
+                value:
+                  ip: 203.0.113.50
+                  mask: 32
+      responses:
+        '200':
+          description: IP added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+
+  /v2/accounts/{accountSid}/trunks/{trunkSid}/destination-uris:
+    get:
+      tags: [Destination URIs]
+      operationId: listDestinationUris
+      summary: List destination URIs
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      responses:
+        '200':
+          description: Destination URIs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+    post:
+      tags: [Destination URIs]
+      operationId: setDestinationUris
+      summary: Set destination URI(s) for inbound SIP
+      description: |
+        Used for **inbound** routing: PSTN → Exotel → Voice AI partner SIP host
+        (FQDN or host/port/transport per partner docs). Not part of the minimal
+        **outbound** SIP setup.
+
+        After mapping, use Exotel Flow **Connect** with **Dial whom** = `sip:<trunkSid>`.
+      parameters:
+        - $ref: '#/components/parameters/accountSid'
+        - $ref: '#/components/parameters/trunkSid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DestinationUrisRequest'
+            examples:
+              partnerTls:
+                value:
+                  destinations:
+                    - destination: partner.example.com:5061;transport=tls
+      responses:
+        '200':
+          description: Destination URIs set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        HTTP Basic with Exotel **API Key** as username and **API Token** as password.
+        From [API Settings](https://my.in.exotel.com/apisettings/site#api-credentials)
+        (or your cluster dashboard).
+
+  parameters:
+    accountSid:
+      name: accountSid
+      in: path
+      required: true
+      description: Exotel Account SID
+      schema:
+        type: string
+        example: your_account_sid
+    trunkSid:
+      name: trunkSid
+      in: path
+      required: true
+      description: Trunk SID returned when the trunk is created (`trunk_sid`)
+      schema:
+        type: string
+        example: trmum17d8e9a37a3732ecbf91a3u
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid API Key / Token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeObject'
+    ClientError:
+      description: Client error (validation, not found, conflict, etc.)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeObject'
+
+  schemas:
+    CreateTrunkRequest:
+      type: object
+      required: [trunk_name, nso_code, domain_name]
+      properties:
+        trunk_name:
+          type: string
+          description: Alphanumeric + underscores; max 16 characters
+          maxLength: 16
+          pattern: '^[A-Za-z0-9_]+$'
+          example: voice_ai_trunk
+        nso_code:
+          type: string
+          description: NSO / routing code; commonly `ANY-ANY`
+          example: ANY-ANY
+        domain_name:
+          type: string
+          description: Account SIP domain `{accountSid}.pstn.exotel.com`
+          example: your_account_sid.pstn.exotel.com
+
+    MapPhoneNumberRequest:
+      type: object
+      required: [phone_number]
+      properties:
+        phone_number:
+          type: string
+          description: Exophone in E.164
+          example: '+9198XXXXXXXX'
+        mode:
+          type: string
+          description: Optional routing mode (e.g. `flow` for StreamKit / Voice AI Flow)
+          example: flow
+
+    CreateCredentialsRequest:
+      type: object
+      required: [user_name, password]
+      properties:
+        user_name:
+          type: string
+          description: SIP digest username (use the same value on the Voice AI platform)
+          example: voice_ai_user
+        password:
+          type: string
+          format: password
+          description: SIP digest password (strong secret; not returned by list/get)
+          example: REPLACE_WITH_STRONG_PASSWORD
+        friendly_name:
+          type: string
+          maxLength: 32
+          description: Label for where the creds are used
+          example: voice_ai_platform
+
+    CredentialData:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '1234'
+        trunk_sid:
+          type: string
+          example: trmum17d8e9a37a3732ecbf91a3u
+        user_name:
+          type: string
+          example: voice_ai_user
+        friendly_name:
+          type: [string, 'null']
+          example: voice_ai_platform
+        date_created:
+          type: string
+          format: date-time
+          example: '2026-01-23T11:37:36Z'
+        date_updated:
+          type: string
+          format: date-time
+          example: '2026-01-23T11:37:36Z'
+
+    ResponseItem:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        error_data:
+          description: Error payload when present; null on success
+          nullable: true
+        status:
+          type: string
+          example: success
+        data:
+          $ref: '#/components/schemas/CredentialData'
+
+    PaginationMetadata:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 50
+        page:
+          type: integer
+          example: 1
+        first_page_uri:
+          type: string
+        prev_page_uri:
+          type: [string, 'null']
+        next_page_uri:
+          type: [string, 'null']
+
+    CredentialMutationResponse:
+      type: object
+      properties:
+        request_id:
+          type: string
+        method:
+          type: string
+          enum: [POST, DELETE]
+        http_code:
+          type: integer
+          example: 200
+        response:
+          $ref: '#/components/schemas/ResponseItem'
+
+    ListCredentialsResponse:
+      type: object
+      properties:
+        request_id:
+          type: string
+        method:
+          type: string
+          example: GET
+        http_code:
+          type: integer
+          example: 200
+        metadata:
+          $ref: '#/components/schemas/PaginationMetadata'
+        response:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResponseItem'
+
+    WhitelistIpRequest:
+      type: object
+      required: [ip, mask]
+      properties:
+        ip:
+          type: string
+          format: ipv4
+          description: Single static egress IPv4 from the Voice AI provider
+          example: 203.0.113.50
+        mask:
+          type: integer
+          description: Must be 32 (single host). CIDR ranges are not supported.
+          enum: [32]
+          example: 32
+
+    DestinationUriEntry:
+      type: object
+      required: [destination]
+      properties:
+        destination:
+          type: string
+          description: Partner SIP host/port/transport (per partner docs)
+          example: partner.example.com:5061;transport=tls
+
+    DestinationUrisRequest:
+      type: object
+      required: [destinations]
+      properties:
+        destinations:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/DestinationUriEntry'
+
+    EnvelopeObject:
+      type: object
+      description: |
+        Typical Exotel JSON envelope (`request_id`, `method`, `http_code`, `response`).
+        Exact nested `data` fields vary by resource; see official Exotel docs for full schemas.
+      additionalProperties: true
+      properties:
+        request_id:
+          type: string
+        method:
+          type: string
+        http_code:
+          type: integer
+        response:
+          description: Object or array depending on the endpoint

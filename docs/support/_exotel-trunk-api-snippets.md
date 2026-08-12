@@ -387,6 +387,7 @@ On success, the HTTP response status code will be **200 OK**.
 
 ## Related docs
 
+- [OpenAPI 3.1 — Exotel SIP trunk (Voice AI subset)](../../openapi/exotel-sip-trunk-voice-ai.yaml)
 - [Support hub — provider URLs, consoles, quick checklists](./README.md)
 - [WebRTC application setup (Exotel + Voice AI)](../integrations/webrtc-application-setup.md)
 - [Exotel + ElevenLabs support article](./exotel-elevenlabs-sip-trunk.md)
